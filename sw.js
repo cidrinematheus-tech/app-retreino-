@@ -1,4 +1,4 @@
-const C='retreino-v2',F=['./','index.html','manifest.json','icon-192.png','icon-512.png','logo.png'];
+const C='retreino-v3',F=['./','index.html','conta.html','treinador.html','aluno.html','app.css','core.js','treinador.js','aluno.js','config.js','manifest.json','logo.png','icon-192.png','icon-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(F)));self.skipWaiting()});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!=C).map(x=>caches.delete(x)))));self.clients.claim()});
-self.addEventListener('fetch',e=>{e.respondWith(fetch(e.request).then(r=>{const c=r.clone();caches.open(C).then(x=>x.put(e.request,c));return r}).catch(()=>caches.match(e.request)))});
+self.addEventListener('fetch',e=>{const r=e.request;if(r.method!='GET'||new URL(r.url).origin!=location.origin)return;e.respondWith(fetch(r).then(x=>{const c=x.clone();caches.open(C).then(s=>s.put(r,c));return x}).catch(()=>caches.match(r)))});

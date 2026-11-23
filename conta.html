@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-BR"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0d0c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ReTreino">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,800&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+<title>ReTreino · Entrar</title>
+<style>
+.split{min-height:100vh;display:grid}
+.brand{position:relative;overflow:hidden;background:linear-gradient(130deg,#1b2419,#0b0d0c);padding:28px 24px;display:flex;flex-direction:column;justify-content:center;gap:14px}
+.brand::after{content:"";position:absolute;right:-60px;top:-10%;bottom:-10%;width:110px;background:var(--a);transform:skewX(-20deg)}
+.brand>*{position:relative;z-index:1;max-width:calc(100% - 60px)}
+.form{padding:24px;display:flex;align-items:center;justify-content:center}.box{width:100%;max-width:400px;display:grid;gap:12px}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--s);padding:5px;border-radius:14px;border:1px solid var(--l)}
+.tabs button{background:0;border:0;color:var(--m);padding:11px;border-radius:10px;font-weight:700}.tabs .on{background:var(--a);color:#0b0d0c}
+.msg{padding:12px;border-radius:12px;font-size:14px;background:var(--s2);border:1px solid var(--l)}.msg.bad{color:var(--bad);border-color:var(--bad)}
+@media(min-width:900px){.split{grid-template-columns:1.1fr 1fr}.brand{padding:60px}.brand>*{max-width:460px}}
+</style></head>
+<body style="padding:0"><div id="app"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="core.js"></script>
+<script>
+const q=new URLSearchParams(location.search),code=q.get('c');let tab=code||q.get('novo')?'novo':'entrar',msg='',busy=false;
+if(code)sessionStorage.rt_invite=code;
+async function redir(){const{data:{user}}=await sb.auth.getUser();const{data:p}=await sb.from('profiles').select('role').eq('id',user.id).single();location.replace(p&&p.role=='treinador'?'treinador.html':'aluno.html')}
+(async()=>{if(!sb)return noCfg();const{data:{session}}=await sb.auth.getSession();if(session)return redir();draw()})();
+function draw(){const novo=tab=='novo';$('#app').innerHTML=`<div class=split><section class=brand><img src="logo.png" class=lg alt="ReTreino Studio"><h1 style="font-size:44px">Treino com ciência.<br>Resultado que você mede.</h1><p class=m>Avaliação física, prescrição de treino e acompanhamento de carga em um só lugar.</p></section>
+<section class=form><div class=box><div class=tabs><button class="${novo?'':'on'}" onclick="tab='entrar';msg='';draw()">Entrar</button><button class="${novo?'on':''}" onclick="tab='novo';msg='';draw()">Criar conta</button></div>
+${code?'<div class=msg>Você recebeu um convite de treinador. Ao criar a conta, você será vinculado a ele.</div>':''}
+${novo?'<label>Nome completo<input id=nm autocomplete=name></label>':''}
+<label>E-mail<input id=em type=email autocomplete=email inputmode=email></label>
+<label>Senha<input id=pw type=password autocomplete="${novo?'new-password':'current-password'}" placeholder="Mínimo 6 caracteres"></label>
+${novo&&!code?'<label>Tipo de conta<select id=rl><option value=aluno>Sou aluno</option><option value=treinador>Sou treinador</option></select></label>':''}
+${msg?'<div class="msg '+(msg[0]=='!'?'bad':'')+'">'+esc(msg.replace(/^!/,''))+'</div>':''}
+<button class=b onclick="go()">${novo?'Criar conta':'Entrar'}</button><a class=g href="index.html">Voltar ao início</a></div></section></div>`}
+async function go(){if(busy)return;const em=$('#em').value.trim(),pw=$('#pw').value,novo=tab=='novo';
+if(!em||pw.length<6){msg='!Informe e-mail e senha (mínimo 6 caracteres).';return draw()}
+busy=true;let r;
+if(novo){const nm=$('#nm').value.trim();if(!nm){busy=false;msg='!Informe seu nome.';return draw()}
+const role=code?'aluno':$('#rl').value;r=await sb.auth.signUp({email:em,password:pw,options:{data:{name:nm,role},emailRedirectTo:location.origin+location.pathname}})}
+else r=await sb.auth.signInWithPassword({email:em,password:pw});
+busy=false;if(r.error){msg='!'+(/invalid login/i.test(r.error.message)?'E-mail ou senha incorretos.':/registered|already/i.test(r.error.message)?'Este e-mail já tem conta. Use a aba Entrar.':r.error.message);return draw()}
+if(r.data.session)return redir();msg='Conta criada. Enviamos um e-mail de confirmação: confirme e depois entre.';tab='entrar';draw()}
+</script></body></html>
