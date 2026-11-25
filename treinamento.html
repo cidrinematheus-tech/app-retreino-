@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111111">
+  <title>ReTreino · Treinamento</title>
+  <style>
+    :root{--bg:#101211;--panel:#1a1e1c;--panel2:#222825;--line:#343c37;--txt:#f4f7f4;--muted:#aab5ad;--green:#b7f500;--danger:#ff7777}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
+    .wrap{max-width:920px;margin:auto;padding:20px 16px 56px}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:22px}
+    .brand{font-weight:900;letter-spacing:.08em}.brand span{color:var(--green)}.small{font-size:13px;color:var(--muted)}
+    h1{font-size:clamp(26px,5vw,38px);line-height:1.08;margin:8px 0 10px}h2{font-size:20px;margin:0 0 12px}h3{font-size:16px;margin:0 0 8px}
+    p{margin:6px 0 12px}.muted{color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin:14px 0}
+    .tile{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:16px;cursor:pointer;text-align:left;color:var(--txt);width:100%}
+    .tile strong{display:block;font-size:17px;margin:8px 0 4px}.tile .ico{font-size:25px}
+    label{display:block;color:var(--muted);font-size:13px;margin:12px 0 5px}input,select,textarea{width:100%;background:#0e100f;border:1px solid var(--line);border-radius:10px;padding:12px;color:var(--txt);font:inherit}
+    textarea{min-height:84px;resize:vertical}button{border:0;border-radius:11px;padding:12px 16px;background:var(--green);color:#111;font-weight:800;font:inherit;cursor:pointer}
+    button.secondary{background:var(--panel2);color:var(--txt);border:1px solid var(--line)}button:disabled{opacity:.45;cursor:not-allowed}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.row>*{flex:1}.hidden{display:none!important}
+    .status{padding:10px 12px;border-radius:10px;background:var(--panel2);color:var(--muted);font-size:13px;margin:12px 0}
+    .status.error{color:var(--danger);border:1px solid #713b3b}.status.ok{color:var(--green);border:1px solid #526b16}
+    .exercise{padding:12px 0;border-bottom:1px solid var(--line)}.exercise:last-child{border:0}
+    .exercise .meta{font-size:13px;color:var(--muted)}.pill{display:inline-block;border:1px solid var(--line);padding:3px 8px;border-radius:99px;font-size:12px;color:var(--muted)}
+    pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0c0e0d;border:1px solid var(--line);border-radius:10px;padding:12px;color:#d8e3da;font-size:12px}
+    .foot{margin-top:28px;font-size:12px;color:var(--muted)}.danger{color:var(--danger)}
+    @media(max-width:620px){.grid{grid-template-columns:1fr}.wrap{padding:16px 12px 40px}.top{align-items:flex-start}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div><div class="brand">RE<span>TREINO</span></div><div class="small">Treinamento e autonomia</div></div>
+    <button id="logout" class="secondary hidden">Sair</button>
+  </header>
+
+  <section id="loading" class="panel"><strong>Conectando ao ReTreino…</strong><p class="muted">Verificando configuração e sessão.</p></section>
+
+  <section id="login" class="panel hidden">
+    <h1>Acesse seu treinamento</h1>
+    <p class="muted">Entre com a conta de aluno cadastrada no ReTreino.</p>
+    <label for="email">E-mail</label><input id="email" type="email" autocomplete="username">
+    <label for="password">Senha</label><input id="password" type="password" autocomplete="current-password">
+    <div class="row" style="margin-top:14px"><button id="loginBtn">Entrar</button><button id="resetBtn" class="secondary">Recuperar senha</button></div>
+    <div id="loginMsg" class="status hidden"></div>
+  </section>
+
+  <main id="app" class="hidden">
+    <div class="small" id="welcome"></div>
+    <h1>Seu treino, no seu ritmo.</h1>
+    <p class="muted">Acesse o treino prescrito ou peça uma sugestão à IA, respeitando as orientações do seu treinador.</p>
+    <div class="grid">
+      <button class="tile" id="showPlan"><span class="ico">🏋️</span><strong>Treinar sozinho</strong><span class="muted">Consultar seu plano e registrar a sessão.</span></button>
+      <button class="tile" id="showAI"><span class="ico">✦</span><strong>Treinar com IA</strong><span class="muted">Solicitar uma sugestão de sessão personalizada.</span></button>
+    </div>
+    <section id="planPanel" class="panel hidden">
+      <div class="row"><h2>Meu plano</h2><span class="pill" id="planBadge">Plano do treinador</span></div>
+      <div id="planContent" class="muted">Carregando plano…</div>
+      <div class="panel" style="background:#121614">
+        <h3>Registrar treino realizado</h3>
+        <div class="row">
+          <div><label for="minutes">Duração (minutos)</label><input id="minutes" type="number" min="1" max="300" value="45"></div>
+          <div><label for="rpe">Esforço percebido (0–10)</label><input id="rpe" type="number" min="0" max="10" value="6"></div>
+        </div>
+        <label for="sessionNotes">Observações (opcional)</label><textarea id="sessionNotes" placeholder="Como se sentiu? Alguma dificuldade ou desconforto?"></textarea>
+        <button id="saveLog">Salvar registro</button>
+      </div>
+    </section>
+    <section id="aiPanel" class="panel hidden">
+      <h2>Treino com inteligência artificial</h2>
+      <p class="muted">A IA considera os dados disponíveis no seu perfil e histórico. A sugestão não substitui a avaliação nem a prescrição do treinador.</p>
+      <label for="goal">Como você gostaria de treinar hoje?</label>
+      <select id="goal"><option value="Treino geral de força e saúde">Força e saúde</option><option value="Mobilidade e movimento leve">Mobilidade e movimento leve</option><option value="Condicionamento físico geral">Condicionamento físico</option><option value="Treino leve de retomada">Retomar os treinos</option></select>
+      <label for="limitations">Como está se sentindo hoje? Informe dores, limitações ou recomendações recebidas (não invente informações).</label>
+      <textarea id="limitations" placeholder="Ex.: sem dor; ou desconforto no joelho direito ao agachar…"></textarea>
+      <div class="row" style="margin-top:12px"><button id="generateAI">Gerar sugestão</button><span class="small">A IA só gera uma sugestão; não altera seu plano oficial.</span></div>
+      <div id="aiResult" class="panel hidden" style="background:#121614"></div>
+    </section>
+    <section class="panel">
+      <h2>Seus registros recentes</h2><div id="history" class="muted">Carregando…</div>
+    </section>
+    <div id="appMsg" class="status hidden"></div>
+  </main>
+  <div class="foot">ReTreino · Movimento, saúde e qualidade de vida. Em caso de dor nova, intensa ou piora dos sintomas, interrompa a sessão e procure orientação profissional.</div>
+</div>
+
+<script src="./config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  let sb, user, profile, currentPlan;
+  const setMsg = (el, msg, error=false) => { el.textContent=msg; el.classList.remove('hidden','error','ok'); if(error)el.classList.add('error'); else el.classList.add('ok'); };
+  const hide = id => $(id).classList.add('hidden');
+  const show = id => $(id).classList.remove('hidden');
+  const esc = s => String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function renderPlan(dias) {
+    if (!dias || (Array.isArray(dias) && !dias.length)) return '<p>Seu treinador ainda não disponibilizou um plano. Entre em contato com ele antes de iniciar um treino.</p>';
+    if (typeof dias === 'string') { try { dias=JSON.parse(dias); } catch(e) { return '<pre>'+esc(dias)+'</pre>'; } }
+    if (!Array.isArray(dias)) return '<pre>'+esc(JSON.stringify(dias,null,2))+'</pre>';
+    return dias.map((day,i) => {
+      if (typeof day === 'string') return '<div class="exercise">'+esc(day)+'</div>';
+      const title=day.nome||day.name||day.dia||day.titulo||('Treino '+(i+1));
+      const items=day.exercicios||day.exercises||day.itens||[];
+      let out='<div class="exercise"><h3>'+esc(title)+'</h3>';
+      if(Array.isArray(items) && items.length) out+=items.map(ex=>{
+        if(typeof ex==='string') return '<div class="meta">• '+esc(ex)+'</div>';
+        return '<div class="meta">• <strong>'+esc(ex.nome||ex.name||ex.exercicio||'Exercício')+'</strong> — '+esc(ex.series||ex.sets||'')+' séries × '+esc(ex.repeticoes||ex.reps||'')+' repetições '+esc(ex.carga||ex.load||'')+' '+esc(ex.intervalo||ex.rest||'')+'</div>';
+      }).join('');
+      else out+='<pre>'+esc(JSON.stringify(day,null,2))+'</pre>';
+      return out+'</div>';
+    }).join('');
+  }
+  async function loadData() {
+    const {data: p, error: pe}=await sb.from('profiles').select('id,role,name,coach_id,coach_nome,data').eq('id',user.id).single();
+    if(pe) throw new Error('Não foi possível carregar seu perfil: '+pe.message);
+    profile=p;
+    if(profile.role!=='aluno') throw new Error('Este módulo é destinado ao ambiente do aluno. Entre com uma conta cadastrada como aluno.');
+    $('welcome').textContent='Olá, '+(profile.name||'aluno')+(profile.coach_nome?' · Treinador(a): '+profile.coach_nome:'');
+    const {data: plan, error: ple}=await sb.from('plans').select('dias,updated_at').eq('aluno_id',user.id).maybeSingle();
+    if(ple) throw new Error('Não foi possível carregar seu plano: '+ple.message);
+    currentPlan=plan;
+    $('planContent').innerHTML=renderPlan(plan?.dias);
+    const {data: logs, error: le}=await sb.from('logs').select('dia,minutos,pse,carga,detalhes,created_at').eq('aluno_id',user.id).order('created_at',{ascending:false}).limit(8);
+    if(le) { $('history').textContent='Não foi possível carregar o histórico: '+le.message; }
+    else $('history').innerHTML=logs.length?logs.map(l=>'<div class="exercise"><strong>'+esc(l.dia||new Date(l.created_at).toLocaleDateString('pt-BR'))+'</strong><div class="meta">'+esc(l.minutos||'—')+' min · esforço '+esc(l.pse??'—')+'/10</div>'+(Array.isArray(l.detalhes)&&l.detalhes.length?'<div class="meta">'+esc(l.detalhes[0]?.observacao||'')+'</div>':'')+'</div>').join(''):'Nenhum treino registrado ainda.';
+  }
+  async function init() {
+    if(!window.RT_CFG || !RT_CFG.url || !RT_CFG.key) throw new Error('Configuração ausente. Preencha url e key no config.js.');
+    if(!/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(RT_CFG.url)) throw new Error('A Project URL no config.js não parece válida.');
+    if(!window.supabase) throw new Error('Não foi possível carregar a biblioteca Supabase.');
+    sb=window.supabase.createClient(RT_CFG.url,RT_CFG.key);
+    const {data:{session}}=await sb.auth.getSession();
+    hide('loading');
+    if(!session){show('login');return;}
+    user=session.user; await enterApp();
+  }
+  async function enterApp(){
+    try{await loadData();hide('login');show('app');show('logout');}
+    catch(e){show('app');setMsg($('appMsg'),e.message,true);}
+  }
+  $('loginBtn').onclick=async()=>{
+    $('loginBtn').disabled=true;
+    try{const {data,error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error)throw error;user=data.user;await enterApp();}
+    catch(e){setMsg($('loginMsg'),e.message,true);}
+    finally{$('loginBtn').disabled=false;}
+  };
+  $('resetBtn').onclick=async()=>{try{const email=$('email').value.trim();if(!email)throw new Error('Informe seu e-mail primeiro.');const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.href});if(error)throw error;setMsg($('loginMsg'),'Se o e-mail estiver cadastrado, você receberá as instruções de recuperação.');}catch(e){setMsg($('loginMsg'),e.message,true);}};
+  $('logout').onclick=async()=>{await sb.auth.signOut();location.reload();};
+  $('showPlan').onclick=()=>{show('planPanel');hide('aiPanel');$('planPanel').scrollIntoView({behavior:'smooth'});};
+  $('showAI').onclick=()=>{show('aiPanel');hide('planPanel');$('aiPanel').scrollIntoView({behavior:'smooth'});};
+  $('saveLog').onclick=async()=>{
+    const minutes=Number($('minutes').value), rpe=Number($('rpe').value);
+    if(!Number.isInteger(minutes)||minutes<1||minutes>300||!Number.isFinite(rpe)||rpe<0||rpe>10){setMsg($('appMsg'),'Confira a duração e o esforço percebido (0 a 10).',true);return;}
+    const payload={aluno_id:user.id,dia:new Date().toLocaleDateString('pt-BR'),minutos,pse:rpe,carga:0,detalhes:[{observacao:$('sessionNotes').value.trim(),origem:'modulo_aluno'}]};
+    const {error}=await sb.from('logs').insert(payload);
+    if(error){setMsg($('appMsg'),'Não foi possível salvar: '+error.message,true);return;}
+    setMsg($('appMsg'),'Treino registrado com sucesso.');await loadData();
+  };
+  $('generateAI').onclick=async()=>{
+    const btn=$('generateAI');btn.disabled=true;$('aiResult').classList.remove('hidden');$('aiResult').textContent='Preparando sua sugestão…';
+    try{
+      const {data:{session}}=await sb.auth.getSession(); if(!session)throw new Error('Sua sessão expirou. Entre novamente.');
+      const {data,error}=await sb.functions.invoke('gerar-treino',{body:{objetivo:$('goal').value,como_se_sente:$('limitations').value.trim()}});
+      if(error)throw new Error(error.message||'Falha ao chamar a função de IA.');
+      const treino=data?.treino||data?.suggestion||data;
+      $('aiResult').innerHTML='<h3>Sugestão de sessão</h3><pre>'+esc(typeof treino==='string'?treino:JSON.stringify(treino,null,2))+'</pre><p class="small">Esta é uma sugestão educativa, não uma prescrição oficial. Confirme com seu treinador antes de executar, especialmente se houver dor ou restrição.</p>';
+    }catch(e){$('aiResult').textContent='Não foi possível gerar a sugestão: '+e.message+'. Verifique se a função Supabase gerar-treino foi publicada e configurada.';}
+    finally{btn.disabled=false;}
+  };
+  sbInit();
+  async function sbInit(){try{await init();}catch(e){hide('loading');show('login');setMsg($('loginMsg'),e.message,true);}}
+})();
+</script>
+</body>
+</html>
