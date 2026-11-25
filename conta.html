@@ -19,36 +19,236 @@
 .brand{position:relative;overflow:hidden;background:linear-gradient(130deg,#1b2419,#0b0d0c);padding:28px 24px;display:flex;flex-direction:column;justify-content:center;gap:14px}
 .brand::after{content:"";position:absolute;right:-60px;top:-10%;bottom:-10%;width:110px;background:var(--a);transform:skewX(-20deg)}
 .brand>*{position:relative;z-index:1;max-width:calc(100% - 60px)}
-.form{padding:24px;display:flex;align-items:center;justify-content:center}.box{width:100%;max-width:400px;display:grid;gap:12px}
+.form{padding:24px;display:flex;align-items:center;justify-content:center}
+.box{width:100%;max-width:400px;display:grid;gap:12px}
 .tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--s);padding:5px;border-radius:14px;border:1px solid var(--l)}
-.tabs button{background:0;border:0;color:var(--m);padding:11px;border-radius:10px;font-weight:700}.tabs .on{background:var(--a);color:#0b0d0c}
-.msg{padding:12px;border-radius:12px;font-size:14px;background:var(--s2);border:1px solid var(--l)}.msg.bad{color:var(--bad);border-color:var(--bad)}
-@media(min-width:900px){.split{grid-template-columns:1.1fr 1fr}.brand{padding:60px}.brand>*{max-width:460px}}
+.tabs button{background:0;border:0;color:var(--m);padding:11px;border-radius:10px;font-weight:700}
+.tabs .on{background:var(--a);color:#0b0d0c}
+.msg{padding:12px;border-radius:12px;font-size:14px;background:var(--s2);border:1px solid var(--l);line-height:1.45}
+.msg.bad{color:var(--bad);border-color:var(--bad)}
+.msg.ok{color:var(--ok);border-color:var(--ok)}
+.msg:empty{display:none}
+.pw{position:relative}.pw input{padding-right:78px}
+.pw button{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:0;border:0;color:var(--m);font-size:13px;font-weight:700;padding:8px 10px}
+button:disabled{opacity:.55;cursor:wait}
+.boot{min-height:100vh;display:grid;place-items:center;color:var(--m)}
 </style></head>
-<body style="padding:0"><div id="app"></div>
+<body style="padding:0">
+<div id="app"><div class="boot">Carregando…</div></div>
+<noscript><div class="boot">Ative o JavaScript do navegador para usar o ReTreino.</div></noscript>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
-<script src="core.js"></script>
 <script>
-const q=new URLSearchParams(location.search),code=q.get('c');let tab=code||q.get('novo')?'novo':'entrar',msg='',busy=false;
-if(code)sessionStorage.rt_invite=code;
-async function redir(){const{data:{user}}=await sb.auth.getUser();const{data:p}=await sb.from('profiles').select('role').eq('id',user.id).single();location.replace(p&&p.role=='treinador'?'treinador.html':'aluno.html')}
-(async()=>{if(!sb)return noCfg();const{data:{session}}=await sb.auth.getSession();if(session)return redir();draw()})();
-function draw(){const novo=tab=='novo';$('#app').innerHTML=`<div class=split><section class=brand><img src="logo.png" class=lg alt="ReTreino Studio"><h1 style="font-size:44px">Treino com ciência.<br>Resultado que você mede.</h1><p class=m>Avaliação física, prescrição de treino e acompanhamento de carga em um só lugar.</p></section>
-<section class=form><div class=box><div class=tabs><button class="${novo?'':'on'}" onclick="tab='entrar';msg='';draw()">Entrar</button><button class="${novo?'on':''}" onclick="tab='novo';msg='';draw()">Criar conta</button></div>
-${code?'<div class=msg>Você recebeu um convite de treinador. Ao criar a conta, você será vinculado a ele.</div>':''}
-${novo?'<label>Nome completo<input id=nm autocomplete=name></label>':''}
-<label>E-mail<input id=em type=email autocomplete=email inputmode=email></label>
-<label>Senha<input id=pw type=password autocomplete="${novo?'new-password':'current-password'}" placeholder="Mínimo 6 caracteres"></label>
-${novo&&!code?'<label>Tipo de conta<select id=rl><option value=aluno>Sou aluno</option><option value=treinador>Sou treinador</option></select></label>':''}
-${msg?'<div class="msg '+(msg[0]=='!'?'bad':'')+'">'+esc(msg.replace(/^!/,''))+'</div>':''}
-<button class=b onclick="go()">${novo?'Criar conta':'Entrar'}</button><a class=g href="index.html">Voltar ao início</a></div></section></div>`}
-async function go(){if(busy)return;const em=$('#em').value.trim(),pw=$('#pw').value,novo=tab=='novo';
-if(!em||pw.length<6){msg='!Informe e-mail e senha (mínimo 6 caracteres).';return draw()}
-busy=true;let r;
-if(novo){const nm=$('#nm').value.trim();if(!nm){busy=false;msg='!Informe seu nome.';return draw()}
-const role=code?'aluno':$('#rl').value;r=await sb.auth.signUp({email:em,password:pw,options:{data:{name:nm,role},emailRedirectTo:location.origin+location.pathname}})}
-else r=await sb.auth.signInWithPassword({email:em,password:pw});
-busy=false;if(r.error){msg='!'+(/invalid login/i.test(r.error.message)?'E-mail ou senha incorretos.':/registered|already/i.test(r.error.message)?'Este e-mail já tem conta. Use a aba Entrar.':r.error.message);return draw()}
-if(r.data.session)return redir();msg='Conta criada. Enviamos um e-mail de confirmação: confirme e depois entre.';tab='entrar';draw()}
-</script></body></html>
+(function () {
+  'use strict';
+  var $ = function (s) { return document.querySelector(s); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';'; }); };
+
+  var params = new URLSearchParams(location.search);
+  var code = (params.get('c') || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (code) { try { sessionStorage.rt_invite = code; } catch (e) {} }
+
+  var tab = (code || params.get('novo')) ? 'novo' : 'entrar';
+  var vals = { nm: '', em: '', rl: 'aluno' };
+  var busy = false, client = null, blocked = false;
+
+  /* ---------- mensagens ---------- */
+  function setMsg(text, type) {
+    var el = $('#msg');
+    if (!el) return;
+    el.className = 'msg' + (type ? ' ' + type : '');
+    el.textContent = text || '';
+  }
+  function setBusy(b) {
+    busy = b;
+    var btn = $('#go');
+    if (!btn) return;
+    btn.disabled = b || blocked;
+    btn.textContent = b ? 'Aguarde…' : (tab === 'novo' ? 'Criar conta' : 'Entrar');
+  }
+
+  /* erros inesperados nunca deixam a tela vazia: aparecem no formulário */
+  window.addEventListener('error', function (e) { setMsg('Erro inesperado: ' + (e.message || 'desconhecido'), 'bad'); });
+  window.addEventListener('unhandledrejection', function (e) {
+    var m = e.reason && e.reason.message ? e.reason.message : String(e.reason);
+    setMsg('Erro inesperado: ' + m, 'bad');
+  });
+
+  function friendly(err) {
+    var m = (err && err.message) ? err.message : String(err);
+    if (/invalid login credentials/i.test(m)) return 'E-mail ou senha incorretos.';
+    if (/email not confirmed/i.test(m)) return 'Você ainda não confirmou o e-mail. Abra a mensagem que enviamos (olhe também o spam) e clique no link.';
+    if (/already registered|already been registered|user already|already exists/i.test(m)) return 'Este e-mail já tem conta. Use a aba Entrar.';
+    if (/rate limit|too many|security purposes|over_email_send_rate_limit/i.test(m)) return 'Muitas tentativas em pouco tempo (limite de e-mails do Supabase). Aguarde alguns minutos e tente de novo.';
+    if (/database error saving new user/i.test(m)) return 'O Supabase criou o acesso mas não conseguiu criar o perfil. Rode o schema.sql atualizado no SQL Editor do Supabase.';
+    if (/signups? (not allowed|are disabled|disabled)|signup.*disabled/i.test(m)) return 'O Supabase está com novos cadastros desativados. Ative em Authentication → Sign In / Providers → Allow new users to sign up.';
+    if (/password/i.test(m) && /(short|least|weak|characters)/i.test(m)) return 'Senha muito curta ou fraca. Use pelo menos 6 caracteres.';
+    if (/invalid api key|apikey|invalid jwt/i.test(m)) return 'Chave do Supabase inválida. Confira a chave "anon / publishable" no config.js.';
+    if (/failed to fetch|networkerror|load failed|network request failed/i.test(m)) return 'Não consegui falar com o Supabase. Confira a internet e a URL no config.js.';
+    if (/relation .* does not exist|could not find the table|schema cache/i.test(m)) return 'As tabelas ainda não existem no Supabase. Rode o schema.sql no SQL Editor.';
+    return m;
+  }
+
+  /* ---------- verificação do config.js ---------- */
+  function checkCfg() {
+    var c = window.RT_CFG || {};
+    if (!c.url || !c.key) return 'Falta configurar o Supabase: abra o config.js, cole a Project URL e a chave anon/publishable e publique de novo.';
+    var u;
+    try { u = new URL(c.url); } catch (e) { return 'A URL no config.js não é válida. Ela deve ser parecida com https://abcdefg.supabase.co'; }
+    if (u.protocol !== 'https:') return 'A URL no config.js precisa começar com https://';
+    if (/supabase\.com$/i.test(u.hostname)) return 'Você colou o endereço do painel do Supabase. Use a Project URL (Project Settings → API), que termina em .supabase.co';
+    if (/^sb_secret_/.test(c.key)) return 'ATENÇÃO: você colocou a chave SECRETA no config.js. Troque pela chave pública (anon / publishable) e gere uma nova chave secreta no Supabase.';
+    if (c.key.indexOf('eyJ') === 0) {
+      try {
+        var p = JSON.parse(atob(c.key.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+        if (p.role === 'service_role') return 'ATENÇÃO: você colocou a chave service_role (secreta) no config.js. Troque pela chave anon e gere uma nova service_role no Supabase.';
+      } catch (e) {}
+    }
+    return '';
+  }
+
+  function loadLib() {
+    return new Promise(function (resolve) {
+      if (window.supabase && window.supabase.createClient) return resolve(true);
+      var s = document.createElement('script');
+      s.src = 'https://unpkg.com/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';
+      s.onload = function () { resolve(!!(window.supabase && window.supabase.createClient)); };
+      s.onerror = function () { resolve(false); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* ---------- vai para o painel certo ---------- */
+  async function redir() {
+    var r = await client.auth.getUser();
+    var user = r.data && r.data.user;
+    if (r.error || !user) { await client.auth.signOut(); return false; } /* sessão antiga/inválida */
+
+    var q = await client.from('profiles').select('role').eq('id', user.id).maybeSingle();
+    if (q.error) { setMsg(friendly(q.error), 'bad'); return false; }
+    if (!q.data) {
+      await client.auth.signOut();
+      setMsg('Sua conta existe, mas o perfil não foi criado no banco. Rode o schema.sql atualizado no SQL Editor do Supabase (ele repara contas antigas) e entre de novo.', 'bad');
+      return false;
+    }
+    location.replace(q.data.role === 'treinador' ? 'treinador.html' : 'aluno.html');
+    return true;
+  }
+
+  /* ---------- tela ---------- */
+  function draw() {
+    var novo = tab === 'novo';
+    $('#app').innerHTML =
+      '<div class="split">' +
+      '<section class="brand"><img src="logo.png" class="lg" alt="ReTreino Studio">' +
+      '<h1 style="font-size:44px">Treino com ciência.<br>Resultado que você mede.</h1>' +
+      '<p class="m">Avaliação física, prescrição de treino e acompanhamento de carga em um só lugar.</p></section>' +
+      '<section class="form"><form class="box" id="f" novalidate>' +
+      '<div class="tabs"><button type="button" data-tab="entrar" class="' + (novo ? '' : 'on') + '">Entrar</button>' +
+      '<button type="button" data-tab="novo" class="' + (novo ? 'on' : '') + '">Criar conta</button></div>' +
+      (code ? '<div class="msg">Você recebeu um convite de treinador. Ao criar a conta, você será vinculado a ele.</div>' : '') +
+      (novo ? '<label>Nome completo<input id="nm" autocomplete="name" value="' + esc(vals.nm) + '"></label>' : '') +
+      '<label>E-mail<input id="em" type="email" autocomplete="email" inputmode="email" autocapitalize="none" value="' + esc(vals.em) + '"></label>' +
+      '<label>Senha<div class="pw"><input id="pw" type="password" autocomplete="' + (novo ? 'new-password' : 'current-password') + '" placeholder="Mínimo 6 caracteres"><button type="button" id="eye">Mostrar</button></div></label>' +
+      (novo && !code ? '<label>Tipo de conta<select id="rl"><option value="aluno"' + (vals.rl === 'aluno' ? ' selected' : '') + '>Sou aluno</option><option value="treinador"' + (vals.rl === 'treinador' ? ' selected' : '') + '>Sou treinador</option></select></label>' : '') +
+      '<div id="msg" class="msg" role="alert" aria-live="polite"></div>' +
+      '<button class="b" id="go" type="submit">' + (novo ? 'Criar conta' : 'Entrar') + '</button>' +
+      '<a class="g" href="index.html">Voltar ao início</a>' +
+      '</form></section></div>';
+
+    var btns = document.querySelectorAll('.tabs button');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].addEventListener('click', function () { keep(); tab = this.getAttribute('data-tab'); draw(); });
+    }
+    $('#eye').addEventListener('click', function () {
+      var p = $('#pw'), show = p.type === 'password';
+      p.type = show ? 'text' : 'password';
+      this.textContent = show ? 'Ocultar' : 'Mostrar';
+    });
+    $('#f').addEventListener('submit', submit);
+    $('#go').disabled = blocked;
+  }
+  function keep() {
+    if ($('#nm')) vals.nm = $('#nm').value;
+    if ($('#em')) vals.em = $('#em').value;
+    if ($('#rl')) vals.rl = $('#rl').value;
+  }
+
+  /* ---------- enviar ---------- */
+  async function submit(ev) {
+    ev.preventDefault();
+    if (busy || blocked || !client) return;
+    keep();
+    var novo = tab === 'novo';
+    var em = $('#em').value.trim(), pw = $('#pw').value, nm = novo ? $('#nm').value.trim() : '';
+    if (novo && !nm) return setMsg('Informe seu nome.', 'bad');
+    if (!/^\S+@\S+\.\S+$/.test(em)) return setMsg('Informe um e-mail válido.', 'bad');
+    if (pw.length < 6) return setMsg('A senha precisa ter no mínimo 6 caracteres.', 'bad');
+
+    setMsg('', ''); setBusy(true);
+    try {
+      if (novo) {
+        var role = code ? 'aluno' : $('#rl').value;
+        var r = await client.auth.signUp({
+          email: em, password: pw,
+          options: {
+            data: { name: nm, role: role, invite: code },
+            emailRedirectTo: location.origin + location.pathname
+          }
+        });
+        if (r.error) throw r.error;
+        /* e-mail já cadastrado (com confirmação ligada) volta sem erro e sem identidades */
+        if (r.data.user && Array.isArray(r.data.user.identities) && r.data.user.identities.length === 0) {
+          throw new Error('User already registered');
+        }
+        if (r.data.session) { await redir(); return; }
+        vals.em = em; tab = 'entrar'; draw();
+        setMsg('Conta criada! Enviamos um e-mail de confirmação para ' + em + '. Clique no link do e-mail e depois entre aqui.', 'ok');
+        return;
+      }
+      var l = await client.auth.signInWithPassword({ email: em, password: pw });
+      if (l.error) throw l.error;
+      await redir();
+    } catch (err) {
+      setMsg(friendly(err), 'bad');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /* ---------- início ---------- */
+  async function start() {
+    draw(); /* o formulário aparece sempre, antes de qualquer chamada ao Supabase */
+
+    var hash = location.hash || '';
+    if (/error_description|error_code/.test(hash)) {
+      var d = new URLSearchParams(hash.replace(/^#/, '')).get('error_description') || '';
+      setMsg(/expired|invalid/i.test(d) ? 'O link do e-mail expirou ou já foi usado. Se você já confirmou, é só entrar com e-mail e senha.' : (d || 'Não foi possível validar o link do e-mail.'), 'bad');
+      history.replaceState(null, '', location.pathname + location.search);
+    }
+
+    var bad = checkCfg();
+    if (bad) { blocked = true; $('#go').disabled = true; return setMsg(bad, 'bad'); }
+    if (!(await loadLib())) {
+      blocked = true; $('#go').disabled = true;
+      return setMsg('Não consegui carregar a biblioteca do Supabase (internet instável ou bloqueador de anúncios/CDN). Recarregue a página.', 'bad');
+    }
+    client = window.supabase.createClient(window.RT_CFG.url.replace(/\/+$/, ''), window.RT_CFG.key, {
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+    });
+
+    try {
+      var s = await client.auth.getSession();
+      if (s.data && s.data.session) await redir();
+    } catch (e) {
+      try { await client.auth.signOut(); } catch (x) {}
+      setMsg(friendly(e), 'bad');
+    }
+  }
+
+  if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) navigator.serviceWorker.register('sw.js').catch(function () {});
+  start();
+})();
+</script>
+</body></html>

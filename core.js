@@ -1,5 +1,5 @@
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';'),num=v=>parseFloat(String(v).replace(',','.'))||0,fx=(x,d=1)=>isFinite(x)&&x?x.toFixed(d):'–',dt=d=>new Date(d).toLocaleDateString('pt-BR');
-const CFG=window.RT_CFG||{},sb=window.supabase&&CFG.url&&CFG.key?window.supabase.createClient(CFG.url,CFG.key):null;
+const CFG=window.RT_CFG||{},sb=window.supabase&&CFG.url&&CFG.key?window.supabase.createClient((()=>{try{return new URL(CFG.url).origin}catch{return CFG.url}})(),CFG.key):null;
 const base=()=>location.origin+location.pathname.replace(/[^/]*$/,'');
 const bust=(f,ms=600)=>{let h;return(...a)=>{clearTimeout(h);h=setTimeout(()=>f(...a),ms)}};
 const TN={rm:'12RM',hop:'Hop tests',sd:'Step down',yb:'Y Balance',om:'Ombro',sk:'Pollock 7 dobras',pe:'Perimetria',sj:'Saltos'};
@@ -10,14 +10,19 @@ function copy(t){(navigator.clipboard?navigator.clipboard.writeText(t):Promise.r
 const rowH=([l,v,c])=>`<div class="r ${c||''}"><span>${esc(l)}</span><b>${esc(v)}</b></div>`;
 const hdr=(t,b)=>`<div class=hd>${b?`<button class=g onclick="${b}" style="width:44px;padding:8px">‹</button>`:''}<h1>${t}</h1></div>`;
 const shell=(items,cur,fn,body)=>`<aside class=side><img src="logo.png" class=br alt="ReTreino Studio">${items.map(([k,l,i])=>`<button class="${cur==k?'on':''}" onclick="${fn}('${k}')">${ic(i)}<span>${l}</span></button>`).join('')}</aside><main class=wrap><header class=top><img src="logo.png" alt="ReTreino Studio"></header>${body}</main>`;
-function noCfg(){document.body.innerHTML='<main class=wrap style="padding-top:48px"><img src="logo.png" class=lg alt="ReTreino Studio" style="margin-bottom:24px"><div class=card><h2>Falta configurar o Supabase</h2><p class=m>Abra o arquivo config.js, cole a URL e a chave pública do seu projeto e publique de novo. O passo a passo está no LEIAME.md.</p></div></main>'}
-async function boot(role){if(!sb){noCfg();return null}
+function noCfg(){const lib=!!window.supabase,t=lib?'Falta configurar o Supabase':'Não consegui carregar o Supabase',p=lib?'Abra o arquivo config.js, cole a URL e a chave pública do seu projeto e publique de novo. O passo a passo está no LEIAME.md.':'A biblioteca do Supabase não carregou (internet instável ou bloqueador de anúncios/CDN). Recarregue a página.';document.body.innerHTML='<main class=wrap style="padding-top:48px"><img src="logo.png" class=lg alt="ReTreino Studio" style="margin-bottom:24px"><div class=card><h2>'+t+'</h2><p class=m>'+p+'</p><button class=b onclick="location.reload()">Tentar de novo</button></div></main>'}
+function fail(e){document.body.innerHTML='<main class=wrap style="padding-top:48px"><img src="logo.png" class=lg alt="ReTreino Studio" style="margin-bottom:24px"><div class=card><h2>Algo deu errado</h2><p class=m>'+esc(e&&e.message||e)+'</p><button class=b onclick="location.reload()">Tentar de novo</button><button class=g onclick="out()">Sair e entrar de novo</button></div></main>'}
+async function boot(role){try{if(!sb){noCfg();return null}
 const{data:{session}}=await sb.auth.getSession();if(!session){location.replace('conta.html'+location.search);return null}
-const{data:p}=await sb.from('profiles').select('*').eq('id',session.user.id).single();
+const{data:{user},error:ue}=await sb.auth.getUser();
+if(ue&&!(ue.status>=400&&ue.status<500))throw ue;
+if(ue||!user){await sb.auth.signOut();location.replace('conta.html'+location.search);return null}
+const{data:p,error:pe}=await sb.from('profiles').select('*').eq('id',user.id).maybeSingle();
+if(pe)throw pe;
 if(!p){await sb.auth.signOut();location.replace('conta.html');return null}
 if(role&&p.role!=role){location.replace(p.role=='treinador'?'treinador.html':'aluno.html');return null}
-return{u:session.user,p}}
-const out=async()=>{await sb.auth.signOut();location.replace('index.html')};
+return{u:user,p}}catch(e){fail(e);return null}}
+const out=async()=>{try{await sb.auth.signOut()}catch{}location.replace('index.html')};
 /* carga de treino */
 const age=x=>(Date.now()-new Date(x.created_at))/864e5;
 function stats(L){const w=(a,b)=>L.filter(x=>age(x)>=a&&age(x)<b).reduce((s,x)=>s+(x.carga||0),0),ac=w(0,7),cr=w(0,28)/4;return{ac,cr,r:cr?ac/cr:0,n7:L.filter(x=>age(x)<7).length}}
